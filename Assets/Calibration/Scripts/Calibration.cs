@@ -8,6 +8,7 @@ using Emgu.CV;
 using Emgu.CV.Structure;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Util;
+using System.Runtime.InteropServices;
 
 public class Calibration
 {
@@ -452,5 +453,45 @@ public class Calibration
             }
             return reprojectionError;
         }
+    }
+
+    public static bool FindBoard(Texture2D image, out Vector2[,] corners, int boardWidth = 9, int boardHeight = 6 )
+    {
+        Image<Gray, byte>  snapshot = TextureConvert.Texture2dToImage<Gray, byte>(image);
+
+        Size patternSize = new Size(boardWidth, boardHeight); //size of chess board to be detected
+
+        
+        //MCvPoint3D32f[][] corners_object_list = new MCvPoint3D32f[Frame_array_buffer.Length][];
+       // PointF[][] corners_points_list = new PointF[Frame_array_buffer.Length][];
+
+        PointF[] _corners = new PointF[patternSize.Width * patternSize.Height];
+
+        bool patternFound = false;
+        Matrix<float> pointMatrix = new Matrix<float>(_corners.Length, 1, 2);
+
+        patternFound = CvInvoke.FindChessboardCorners(snapshot, patternSize, pointMatrix);
+
+        if (patternFound)
+        {
+            corners = new Vector2[boardWidth, boardHeight];
+            Matrix<float>[] pointChannels =  pointMatrix.Split();
+            int idx = 0;
+            foreach (PointF p in _corners)
+            {
+                
+                //Debug.Log("points[" + idx + "]=" + pointChannels[0][idx,0] + "," + pointChannels[1][idx, 0]);
+                corners[idx % boardWidth, idx / boardWidth] = new Vector2(((float)pointChannels[0][idx, 0]) / image.width, 1-((float)pointChannels[1][idx, 0]) / image.height);
+
+                //Debug.Log("points[" + idx + "]=" + corners[idx % boardWidth, idx / boardWidth]);
+
+                idx++;
+            }
+        }
+        else
+        {
+            corners = null;
+        }
+        return patternFound;
     }
 }
